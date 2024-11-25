@@ -1,5 +1,21 @@
 package webhook
 
+type OpenSingleChatEvent struct {
+	User      User  `json:"user"`      // 会话打开者，即谁打开了与机器人的单聊会话
+	Timestamp int64 `json:"timestamp"` // 秒级时间戳
+}
+
+func onOpenSingleChat(req *eventRequest, cb func(OpenSingleChatEvent)) {
+	if cb == nil {
+		return
+	}
+
+	var event OpenSingleChatEvent
+	event.User = req.raiser()
+	event.Timestamp = req.Timestamp
+	go cb(event) // 避免阻塞推推业务
+}
+
 type SingleMessageEvent struct {
 	User      User  `json:"user"`      // 消息发送者
 	Timestamp int64 `json:"timestamp"` // 秒级时间戳

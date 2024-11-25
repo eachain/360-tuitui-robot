@@ -17,6 +17,8 @@ type Options struct {
 //
 // 如果事件由收回调的本机器人触发，不会有回调产生。
 type Callback struct {
+	// 打开与机器人的单聊会话，对应事件single_chat_open。
+	OnOpenSingleChat func(OpenSingleChatEvent)
 	// 单聊消息回调，对应事件single_chat。
 	OnReceiveSingleMessage func(SingleMessageEvent)
 
@@ -102,6 +104,8 @@ func NewHandler(cb Callback, opts *Options) http.Handler {
 		}
 
 		switch req.Event {
+		case "single_chat_open":
+			onOpenSingleChat(req, cb.OnOpenSingleChat)
 		case "single_chat":
 			onReceiveSingleMessage(req, cb.OnReceiveSingleMessage)
 
