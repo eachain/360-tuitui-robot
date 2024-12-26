@@ -22,9 +22,9 @@ type IAHead struct {
 }
 
 type IABody struct {
-	Title   string `json:"title,omitempty"`  // 正⽂标题
-	Image   string `json:"image,omitempty"`  // 图⽚⽂件的media_id
-	Content string `json:"tcolor,omitempty"` // 正⽂内容
+	Title   string `json:"title,omitempty"`   // 正⽂标题
+	Image   string `json:"image,omitempty"`   // 图⽚⽂件的media_id
+	Content string `json:"content,omitempty"` // 正⽂内容
 }
 
 type IAField struct {
