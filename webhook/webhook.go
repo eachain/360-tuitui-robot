@@ -51,10 +51,7 @@ type Callback struct {
 
 type eventRequest struct {
 	// 事件发起人
-	Cid  string `json:"cid"`
-	Uid  string `json:"uid"`
-	User string `json:"user_account"` // 域账号
-	Name string `json:"user_name"`
+	raiser
 
 	Timestamp int64 `json:"timestamp,string"` // 事件发起时间
 
@@ -68,8 +65,15 @@ type eventRequest struct {
 	decode func(any) error
 }
 
+type raiser struct {
+	Cid  string `json:"cid"`
+	Uid  string `json:"uid"`
+	User string `json:"user_account"` // 域账号
+	Name string `json:"user_name"`
+}
+
 // raiser: 事件发起人
-func (er *eventRequest) raiser() User {
+func (er raiser) toUser() User {
 	return User{
 		// Cid:     er.Cid,
 		Uid:     er.Uid,
@@ -164,11 +168,17 @@ type Voice struct {
 }
 
 type Message struct {
-	MsgId     string   `json:"msgid"`               // 消息id
-	MsgType   string   `json:"msgtype"`             // 消息类型：文本"text", 引用"reference", 图文混排"mixed", 文件"file", 图片"image", 语音"voice"
-	Text      string   `json:"text,omitempty"`      // valid if MsgType == "text" || MsgType == "reference" || MsgType == "mixed"
-	Reference string   `json:"reference,omitempty"` // valid if MsgType == "reference"
-	File      *File    `json:"file,omitempty"`      // valid if MsgType == "file"
-	Images    []*Image `json:"images,omitempty"`    // valid if MsgType == "image" || MsgType == "mixed"
-	Voice     *Voice   `json:"voice,omitempty"`     // valid if MsgType == "voice"
+	MsgId   string   `json:"msgid"`          // 消息id
+	MsgType string   `json:"msgtype"`        // 消息类型：文本"text", 图文混排"mixed", 文件"file", 图片"image", 语音"voice"
+	Text    string   `json:"text,omitempty"` // valid if MsgType == "text" || MsgType == "mixed"
+	Ref     *RefMsg  `json:"ref,omitempty"`
+	File    *File    `json:"file,omitempty"`   // valid if MsgType == "file"
+	Images  []*Image `json:"images,omitempty"` // valid if MsgType == "image" || MsgType == "mixed"
+	Voice   *Voice   `json:"voice,omitempty"`  // valid if MsgType == "voice"
+}
+
+type RefMsg struct {
+	User User `json:"user"`  // 消息发送者
+	IsMe bool `json:"is_me"` // sender.uid == bot.uid, 被引用的这条消息是否是机器人自己发的
+	Message
 }

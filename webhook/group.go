@@ -25,12 +25,16 @@ type groupMessage struct {
 	MsgId     string        `json:"msgid"`
 	MsgType   string        `json:"msg_type"` // 消息类型：text(文本), reference(引用), file(文件), image(图片), mixed(图文混排)
 	Text      string        `json:"text"`
-	Reference string        `json:"reference"` // 被引用的消息
+	Ref       *groupRefMsg  `json:"ref"` // 被引用的消息
 	File      *fileOutput   `json:"file"`
-	Images    []string      `json:"images"`
-	ImageIds  []string      `json:"image_ids"`
-	Voice     string        `json:"voice"`
-	VoiceFid  string        `json:"voice_id"`
+	imageOutput
+	voiceOutput
+}
+
+type groupRefMsg struct {
+	raiser
+	IsMe bool `json:"is_me"` // sender.uid == bot.uid, 被引用的这条消息是否是机器人自己发的
+	groupMessage
 }
 
 func onReceiveGroupMessage(req *eventRequest, cb func(GroupMessageEvent)) {
@@ -45,7 +49,7 @@ func onReceiveGroupMessage(req *eventRequest, cb func(GroupMessageEvent)) {
 	}
 
 	var msg GroupMessageEvent
-	msg.User = req.raiser()
+	msg.User = req.raiser.toUser()
 	msg.Timestamp = req.Timestamp
 
 	msg.GroupId = gm.GroupId
@@ -54,31 +58,23 @@ func onReceiveGroupMessage(req *eventRequest, cb func(GroupMessageEvent)) {
 	msg.AtMe = gm.AtMe
 	msg.MsgId = gm.MsgId
 	msg.MsgType = gm.MsgType
-
 	msg.Text = gm.Text
-	msg.Reference = gm.Reference
+	msg.File = gm.File.ToFile()
+	msg.Images = gm.ToImages()
+	msg.Voice = gm.ToVoice()
 
-	if gm.File != nil {
-		msg.File = &File{
-			Name:    gm.File.Name,
-			MediaId: gm.File.Fid,
-			URL:     gm.File.URL,
-		}
-	}
-
-	if len(gm.Images) > 0 && len(gm.ImageIds) == len(gm.Images) {
-		for i := range gm.ImageIds {
-			msg.Images = append(msg.Images, &Image{
-				MediaId: gm.ImageIds[i],
-				URL:     gm.Images[i],
-			})
-		}
-	}
-
-	if gm.VoiceFid != "" {
-		msg.Voice = &Voice{
-			MediaId: gm.VoiceFid,
-			URL:     gm.Voice,
+	if gm.Ref != nil {
+		msg.Ref = &RefMsg{
+			User: gm.Ref.raiser.toUser(),
+			IsMe: gm.Ref.IsMe,
+			Message: Message{
+				MsgId:   gm.Ref.MsgId,
+				MsgType: gm.Ref.MsgType,
+				Text:    gm.Ref.Text,
+				File:    gm.Ref.File.ToFile(),
+				Images:  gm.Ref.ToImages(),
+				Voice:   gm.Ref.ToVoice(),
+			},
 		}
 	}
 
@@ -112,7 +108,7 @@ func onGroupEvent(req *eventRequest, cb func(GroupMemberEvent)) {
 	}
 
 	go cb(GroupMemberEvent{
-		User:       req.raiser(),
+		User:       req.raiser.toUser(),
 		GroupId:    gme.GroupId,
 		GroupName:  gme.GroupName,
 		ContainsMe: gme.ContainsMe,

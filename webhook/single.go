@@ -11,7 +11,7 @@ func onOpenSingleChat(req *eventRequest, cb func(OpenSingleChatEvent)) {
 	}
 
 	var event OpenSingleChatEvent
-	event.User = req.raiser()
+	event.User = req.raiser.toUser()
 	event.Timestamp = req.Timestamp
 	go cb(event) // 避免阻塞推推业务
 }
@@ -29,16 +29,73 @@ type fileOutput struct {
 	Fid  string `json:"file_id"`
 }
 
+func (f *fileOutput) ToFile() *File {
+	if f == nil {
+		return nil
+	}
+
+	return &File{
+		Name:    f.Name,
+		MediaId: f.Fid,
+		URL:     f.URL,
+	}
+}
+
+type imageOutput struct {
+	Images   []string `json:"images"`
+	ImageIds []string `json:"image_ids"`
+}
+
+func (io imageOutput) ToImages() []*Image {
+	if len(io.Images) == 0 {
+		return nil
+	}
+
+	images := make([]*Image, 0, len(io.ImageIds))
+	for i := range io.ImageIds {
+		images = append(images, &Image{
+			MediaId: io.ImageIds[i],
+		})
+	}
+	if len(io.Images) == len(io.ImageIds) {
+		for i := range images {
+			images[i].URL = io.Images[i]
+		}
+	}
+
+	return images
+}
+
+type voiceOutput struct {
+	Voice    string `json:"voice"`
+	VoiceFid string `json:"voice_id"`
+}
+
+func (vo voiceOutput) ToVoice() *Voice {
+	if vo.VoiceFid == "" {
+		return nil
+	}
+
+	return &Voice{
+		MediaId: vo.VoiceFid,
+		URL:     vo.Voice,
+	}
+}
+
 type singleMessage struct {
-	MsgId     string      `json:"msgid"`
-	MsgType   string      `json:"msg_type"`
-	Text      string      `json:"text"`
-	Reference string      `json:"reference"`
-	File      *fileOutput `json:"file"`
-	Images    []string    `json:"images"`
-	ImageIds  []string    `json:"image_ids"`
-	Voice     string      `json:"voice"`
-	VoiceFid  string      `json:"voice_id"`
+	MsgId   string        `json:"msgid"`
+	MsgType string        `json:"msg_type"`
+	Text    string        `json:"text"`
+	Ref     *singleRefMsg `json:"ref"`
+	File    *fileOutput   `json:"file"`
+	imageOutput
+	voiceOutput
+}
+
+type singleRefMsg struct {
+	raiser
+	IsMe bool `json:"is_me"` // sender.uid == bot.uid, 被引用的这条消息是否是机器人自己发的
+	singleMessage
 }
 
 func onReceiveSingleMessage(req *eventRequest, cb func(SingleMessageEvent)) {
@@ -53,35 +110,27 @@ func onReceiveSingleMessage(req *eventRequest, cb func(SingleMessageEvent)) {
 	}
 
 	var msg SingleMessageEvent
-	msg.User = req.raiser()
+	msg.User = req.raiser.toUser()
 	msg.Timestamp = req.Timestamp
 	msg.MsgId = sm.MsgId
 	msg.MsgType = sm.MsgType
-
 	msg.Text = sm.Text
-	msg.Reference = sm.Reference
+	msg.File = sm.File.ToFile()
+	msg.Images = sm.ToImages()
+	msg.Voice = sm.ToVoice()
 
-	if sm.File != nil {
-		msg.File = &File{
-			Name:    sm.File.Name,
-			MediaId: sm.File.Fid,
-			URL:     sm.File.URL,
-		}
-	}
-
-	if len(sm.Images) > 0 && len(sm.ImageIds) == len(sm.Images) {
-		for i := range sm.ImageIds {
-			msg.Images = append(msg.Images, &Image{
-				MediaId: sm.ImageIds[i],
-				URL:     sm.Images[i],
-			})
-		}
-	}
-
-	if sm.VoiceFid != "" {
-		msg.Voice = &Voice{
-			MediaId: sm.VoiceFid,
-			URL:     sm.Voice,
+	if sm.Ref != nil {
+		msg.Ref = &RefMsg{
+			User: sm.Ref.raiser.toUser(),
+			IsMe: sm.Ref.IsMe,
+			Message: Message{
+				MsgId:   sm.Ref.MsgId,
+				MsgType: sm.Ref.MsgType,
+				Text:    sm.Ref.Text,
+				File:    sm.Ref.File.ToFile(),
+				Images:  sm.Ref.ToImages(),
+				Voice:   sm.Ref.ToVoice(),
+			},
 		}
 	}
 

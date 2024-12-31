@@ -79,7 +79,7 @@ func onTeamsPostEvent(req *eventRequest, cb func(TeamsPostEvent)) {
 	}
 
 	post := TeamsPostEvent{
-		User:         req.raiser(),
+		User:         req.raiser.toUser(),
 		TeamId:       tp.TeamId,
 		TeamName:     tp.TeamName,
 		TeamDesc:     tp.TeamDesc,
@@ -142,7 +142,7 @@ func onTeamsMemberEvent(req *eventRequest, cb func(TeamsMemberEvent)) {
 	if err != nil {
 		return
 	}
-	event.User = req.raiser()
+	event.User = req.raiser.toUser()
 
 	go cb(event) // 避免阻塞推推业务
 }
@@ -176,7 +176,7 @@ func onTeamsChannelEvent(req *eventRequest, cb func(TeamsChannelEvent)) {
 	if err != nil {
 		return
 	}
-	event.User = req.raiser()
+	event.User = req.raiser.toUser()
 
 	go cb(event) // 避免阻塞推推业务
 }
@@ -223,7 +223,7 @@ func onTeamsChannelTabEvent(req *eventRequest, cb func(TeamsChannelTabEvent)) {
 	if err != nil {
 		return
 	}
-	event.User = req.raiser()
+	event.User = req.raiser.toUser()
 
 	go cb(event) // 避免阻塞推推业务
 }
